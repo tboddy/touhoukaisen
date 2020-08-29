@@ -29,6 +29,26 @@ local function colors()
   return output
 end
 
+local function colorsLo()
+  local colorsTable = {
+    offWhite = 'f0f0dc',
+    yellow = 'fac800',
+    green = '10c840',
+    blue = '00a0c8',
+    red = 'd24040',
+    brown = 'a0694b',
+    gray = '736464',
+    black = '101820',
+    white = 'ffffff'
+  }
+  local output = {}
+  for color, v in pairs(colorsTable) do
+    local _, _, r, g, b, a = colorsTable[color]:find('(%x%x)(%x%x)(%x%x)')
+    output[color] = {tonumber(r, 16) / 255, tonumber(g, 16) / 255, tonumber(b, 16) / 255, 1}
+  end
+  return output
+end
+
 local function images(dir, files)
   local arr = {}
   for i = 1, #files do arr[files[i]] = love.graphics.newImage('img/' .. dir .. '/' .. files[i] .. '.png') end
@@ -38,7 +58,7 @@ end
 
 local function processScore(input)
   local score = tostring(input)
-  for i = 1, 7 - #score do score = '0' .. score end
+  for i = 1, 5 - #score do score = '0' .. score end
   return score
 end
 
@@ -60,25 +80,6 @@ local function getIndex(arr)
     end
   end
   return index
-end
-
-local masks = {
-  half = love.graphics.newImage('img/masks/half.png'),
-  quarter = love.graphics.newImage('img/masks/quarter.png'),
-  blob = love.graphics.newImage('img/masks/blob.png'),
-  most = love.graphics.newImage('img/masks/most.png')
-}
-
-local maskShader = love.graphics.newShader([[vec4 effect(vec4 color, Image texture, vec2 texture_coords, vec2 screen_coords){ if(Texel(texture, texture_coords).rgb == vec3(0.0)) {discard;} return vec4(1.0); }]])
-local function doMask(mask, callback)
-  love.graphics.stencil(function()
-    love.graphics.setShader(maskShader)
-    love.graphics.draw(masks[mask], 0, 0)
-    return love.graphics.setShader()
-  end, 'replace', 1)
-  love.graphics.setStencilTest('greater', 0)
-  callback()
-  love.graphics.setStencilTest()
 end
 
 local function slowEntity(entity, limit, mod)
@@ -105,16 +106,17 @@ local function restart()
 end
 
 return {
-  scale = 1,
-  width = 640,
-  height = 480,
-  gameWidth = 448,
-  gameHeight = 448,
+  scale = 2,
+  width = 320,
+  height = 240,
+  gameWidth = 240,
+  gameHeight = 240,
   loaded = false,
   gameOver = false,
   started = false,
   clock = 0,
   colors = colors(),
+  colorsLo = colorsLo(),
   paused = false,
   processScore = processScore,
   getAngle = getAngle,
@@ -122,21 +124,22 @@ return {
   getIndex = getIndex,
   limit = 1 / 60,
   score = 0,
+  bobInterval = 60 * 4,
   highScore = 0,
   grid = 16,
-  maskShader = maskShader,
-  mask = doMask,
-  font = love.graphics.newFont('fonts/jamma.ttf', 13),
-  fontBig = love.graphics.newFont('fonts/jamma.ttf', 13 * 2),
+  font = love.graphics.newFont('fonts/Gold Box 8x8 Monospaced.ttf', 8),
+  -- font = love.graphics.newFont('fonts/jamma.ttf', 13),
+  -- fontBig = love.graphics.newFont('fonts/jamma.ttf', 13 * 2),
   fontJapan = love.graphics.newFont('fonts/jackey.ttf', 12),
-  fontJapanBig = love.graphics.newFont('fonts/jackey.ttf', 12 * 2),
+  -- fontJapanBig = love.graphics.newFont('fonts/jackey.ttf', 12 * 2),
   images = images,
   dualStick = true,
   slowEntity = slowEntity,
   animateInterval = 12,
   changingZones = true,
   pauseClock = 0,
-  changingZoneClock = 60 * 3.5,
+  -- changingZoneClock = 60 * 3.5,
+  changingZoneClock = 60 * .5,
   doFullscreen = doFullscreen,
   fullscreen = false,
   restart = restart

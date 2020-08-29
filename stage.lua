@@ -1,4 +1,4 @@
-local images, wingScale, bullets, killBulletClock, killBulletLimit, bulletAnimateInterval, bulletAnimateMax, bossOutroPlaying, pausing
+local images, bullets, killBulletClock, killBulletLimit, bulletAnimateInterval, bulletAnimateMax, bossOutroPlaying, pausing
 
 local function loadZones()
   stage.zones = {
@@ -10,16 +10,14 @@ local function loadZones()
 end
 
 local function load()
-  images = g.images('stage', {'onibottom', 'onishadow', 'onishadow2', 'onihead', 'onilines', 'onilinesshadow', 'fairydown', 'fairydownwing', 'bakebake', 'bakebakeover', 'shell1', 'shell1over', 'shell2', 'shell2over',
-    'shell3', 'shell3over', 'shell1outline', 'shell2outline', 'shell3outline'})
-  wingScale = 1
+  images = g.images('stage', {'onibottom', 'onihead', 'onilines', 'fairydown', 'bakebake', 'shell1', 'shell2', 'shell3'})
   for i = 1, stage.sectionCount * stage.sectionCount * 2 do
     stage.faries[i] = {}
     stage.shells[i] = {}
     stage.bakebakes[i] = {}
   end
   bullets = {}
-  local types = {'small', 'big', 'bolt', 'arrow', 'pill'}
+  local types = {'small', 'big', 'arrow'}
   for i = 1, 640 do bullets[i] = {} end
   for i = 1, #types do
     for j = 1, 4 do
@@ -61,7 +59,7 @@ local function spawnFairy(x, y)
   fairy.flags = {}
   fairy.hit = false
   fairy.seen = false
-  fairy.initSpeed = .75
+  fairy.initSpeed = .5
   fairy.speed = fairy.initSpeed
   fairy.x = randomX(x)
   fairy.y = randomY(y)
@@ -91,7 +89,7 @@ local function spawnBakebake(x, y)
   bakebake.flags = {}
   bakebake.hit = false
   bakebake.seen = false
-  bakebake.initSpeed = .5
+  bakebake.initSpeed = .25
   bakebake.speed = bakebake.initSpeed
   bakebake.x = randomX(x)
   bakebake.y = randomY(y)
@@ -164,7 +162,7 @@ end
 
 local function updateSeen(entity, isOni)
   entity.seen = false
-  local mod = g.gameWidth / 2 + g.grid * 2
+  local mod = g.gameWidth / 2 + g.grid * 3
   if isOni then mod = g.gameWidth / 2 + images.onibottom:getHeight() / 2 end
   if entity.x >= player.x - mod and entity.x <= player.x + mod and entity.y >= player.y - mod and entity.y <= player.y + mod then
     entity.seen = true
@@ -194,6 +192,7 @@ local function killOni()
   g.score = g.score + 5000
 end
 
+local patternMax, patternLimit = 60 * 6, 60 * 5
 local oniPatterns = {
 
   function()
@@ -213,20 +212,20 @@ local oniPatterns = {
             bullet.x = stage.oni.flags.bulletPos.x
             bullet.y = stage.oni.flags.bulletPos.y
             bullet.angle = angle
-            bullet.speed = 6
+            bullet.speed = 3
             bullet.type = 'arrow'
           end, function(bullet)
-            if bullet.flags.flipped and bullet.speed < 3.5 then
-              bullet.speed = bullet.speed + .1
+            if bullet.flags.flipped and bullet.speed < 2 then
+              bullet.speed = bullet.speed + .05
             elseif not bullet.flags.flipped then
-              g.slowEntity(bullet, 0, .2)
+              g.slowEntity(bullet, 0, .1)
               if bullet.speed <= 0 then bullet.flags.flipped = true end
             end
           end)
         end
         angle = angle + math.tau / count
       end
-      local speed = 25
+      local speed = g.grid
       stage.oni.flags.bulletPos.x = stage.oni.flags.bulletPos.x + math.cos(stage.oni.flags.bulletAngle) * speed
       stage.oni.flags.bulletPos.y = stage.oni.flags.bulletPos.y + math.sin(stage.oni.flags.bulletAngle) * speed
     end
@@ -239,7 +238,7 @@ local oniPatterns = {
           bullet.top = true
           local mod = math.pi / 3
           bullet.angle = g.getAngle(stage.oni, player) - mod + mod * 2 * math.random()
-          bullet.speed = 3 + math.random()
+          bullet.speed = 2 + math.random()
           if math.random() < .5 then bullet.type = 'big' else bullet.type = 'small' end
           bullet.flags.minSpeed = bullet.speed - 1
         end, function(bullet)
@@ -256,7 +255,7 @@ local oniPatterns = {
       stage.oni.flags.bulletAngle = g.getAngle(stage.oni, player)
     end
     if stage.oni.clock % interval == 0 and stage.oni.clock % max < limit then rings(stage.oni.clock % (interval * 2) == 0) end
-    if stage.oni.clock % max == top then burst() end
+    -- if stage.oni.clock % max == top then burst() end
   end,
 
   function()
@@ -288,7 +287,7 @@ local oniPatterns = {
             bullet.x = x
             bullet.y = y
             bullet.angle = angle
-            bullet.speed = 3.5
+            bullet.speed = 2
             bullet.type = 'big'
           end)
           angle = angle + math.tau / count
@@ -327,7 +326,7 @@ local oniPatterns = {
             bullet.x = x
             bullet.y = stage.oni.y
             bullet.angle = angle
-            bullet.speed = 3
+            bullet.speed = 2
             bullet.type = 'arrow'
             bullet.top = true
           end)
@@ -358,7 +357,7 @@ local oniPatterns = {
             bullet.x = stage.oni.x
             bullet.y = stage.oni.y
             bullet.angle = angle
-            bullet.speed = 3.5 - diff
+            bullet.speed = 2 - diff
             bullet.type = 'big'
           end)
           angle = angle + math.tau / count
@@ -376,7 +375,7 @@ local oniPatterns = {
         local count = 3
         local diff = math.pi / 20
         local angle = stage.oni.arrowAngle - diff * math.floor(count / 2)
-        local speed = 2.75
+        local speed = 2
         sound.playSfx('bullet3')
         for i = 1, count do
           spawnBullet(function(bullet)
@@ -388,7 +387,7 @@ local oniPatterns = {
             bullet.top = true
           end)
           angle = angle + diff
-          local mod = .5
+          local mod = .25
           if i > math.floor(count / 2) then speed = speed - mod
           else speed = speed + mod end
         end
@@ -407,7 +406,6 @@ local oniPatterns = {
     ring()
     arrows()
   end
-
 }
 
 local function updateOni()
@@ -415,28 +413,32 @@ local function updateOni()
     local angle
     if stage.oni.active then
       angle = g.getAngle(stage.oni, player)
-      local speed, distance = 6, g.getDistance(stage.oni, player)
-      if distance <= g.grid * 22 then speed = 3.5 end
-      if distance <= g.grid * 13 then
-        speed = 2
+      stage.oni.speed = 4
+      local distance = g.getDistance(stage.oni, player)
+      if distance <= g.grid * 15 then stage.oni.speed = 3 end
+      if distance <= g.grid * 8 then
         stage.oni.ready = true
+        if stage.oni.speed > 0 then stage.oni.speed = stage.oni.speed - .5 end
+        if stage.oni.speed < 0 then stage.oni.speed = 0 end
       end
-      if distance <= g.grid * 11 then speed = 0 end
-      stage.oni.x = stage.oni.x + math.cos(angle) * speed
-      stage.oni.y = stage.oni.y + math.sin(angle) * speed
+      if distance <= g.grid * 6.5 then stage.oni.speed = 0 end
+      stage.oni.x = stage.oni.x + math.cos(angle) * stage.oni.speed
+      stage.oni.y = stage.oni.y + math.sin(angle) * stage.oni.speed
     else
-      local distanceMod = g.gameWidth * 10
+      local distanceMod = g.gameWidth * 5
       stage.oni.x = player.x + math.cos(stage.oni.spawnAngle) * distanceMod
       stage.oni.y = player.y + math.cos(stage.oni.spawnAngle) * distanceMod
     end
+
   end
   local function shot()
-    local max, limit = 60 * 6, 60 * 4.5
-    if stage.oni.clock % max == 0 and stage.oni.clock > 0 then
-      stage.oni.currentPattern = stage.oni.currentPattern + 1
-      if stage.oni.currentPattern > #oniPatterns then stage.oni.currentPattern = 1 end
-    end
-    if stage.oni.clock % max < limit then oniPatterns[stage.oni.currentPattern]() end
+    -- local max, limit = 60 * 6, 60 * 4.5
+    -- if stage.oni.clock % max == 0 and stage.oni.clock > 0 then
+    --   stage.oni.currentPattern = stage.oni.currentPattern + 1
+    --   if stage.oni.currentPattern > #oniPatterns then stage.oni.currentPattern = 1 end
+    -- end
+    -- if stage.oni.clock % max < limit then oniPatterns[stage.oni.currentPattern]() end
+    if stage.oni.clock % patternMax < patternLimit then oniPatterns[1]() end
     stage.oni.clock = stage.oni.clock + 1
   end
   if stage.oni.active and stage.oni.ready then shot() end
@@ -468,7 +470,7 @@ local function updateFairy(fairy)
   local target, angle = getFairyTarget(fairy), fairy.idleAngle
   if target and not stage.oni.active then
     local distance, targetAngle = g.getDistance(fairy, target), g.getAngle(fairy, target)
-    local limit, slowLimit = g.grid * 6, g.grid * 4
+    local limit, slowLimit = g.grid * 4, g.grid * 2
     if distance >= slowLimit then
       fairy.speed = fairy.initSpeed / 2
       if distance >= limit then fairy.speed = fairy.initSpeed end
@@ -477,7 +479,7 @@ local function updateFairy(fairy)
       fairy.speed = 0
       if fairy.mineClock % 15 == 0 then
         local eX, eY = fairy.x + math.cos(targetAngle) * (distance / 2), fairy.y + math.sin(targetAngle) * (distance / 2)
-        explosion.spawn({x = eX, y = eY})
+        if fairy.seen then explosion.spawn({x = eX, y = eY, type = 'green'}) end
         target.hit = true
       end
       fairy.mineClock = fairy.mineClock + 1
@@ -492,7 +494,7 @@ local function updateFairy(fairy)
       if math.sqrt((bullet.x - fairy.x) * (bullet.x - fairy.x) + (bullet.y - fairy.y) * (bullet.y - fairy.y)) < size + images.fairydown:getHeight() / 2 then
         fairy.health = fairy.health - 1
         if fairy.seen then
-          explosion.spawn({x = bullet.x, y = bullet.y})
+          explosion.spawn({x = bullet.x, y = bullet.y, type = 'blue'})
           sound.playSfx('explosion1')
         end
         bullet.active = false
@@ -503,8 +505,10 @@ local function updateFairy(fairy)
   fairy.x = fairy.x + math.cos(angle) * fairy.speed
   fairy.y = fairy.y + math.sin(angle) * fairy.speed
   if killed then
-    explosion.spawn({x = fairy.x, y = fairy.y, big = 'true'})
-    if fairy.seen then sound.playSfx('explosion2') end
+    if fairy.seen then
+      sound.playSfx('explosion2')
+      explosion.spawn({x = fairy.x, y = fairy.y, big = 'true', type = 'blue'})
+    end
     g.score = g.score + 500
     spawnNewFairy(fairy)
   elseif not fairy.seen then
@@ -533,7 +537,7 @@ local function updateBakebake(bakebake)
             bullet.x = bakebake.x
             bullet.y = bakebake.y
             bullet.angle = angle
-            bullet.speed = 2.5
+            bullet.speed = 2
             bullet.type = 'big'
           end)
           angle = angle + math.tau / count
@@ -547,11 +551,11 @@ local function updateBakebake(bakebake)
               bullet.x = bakebake.x
               bullet.y = bakebake.y
               bullet.angle = angle
-              bullet.speed = 2.5
+              bullet.speed = 2
               bullet.type = 'small'
               if opposite then
                 bullet.angle = bullet.angle + math.tau / count / 2
-                bullet.speed = 1.5
+                bullet.speed = 1
               end
             end)
             angle = angle + math.tau / count
@@ -571,7 +575,7 @@ local function updateBakebake(bakebake)
             bullet.angle = angle
             bullet.speed = 2
             bullet.type = 'arrow'
-            if i == 2 then bullet.speed = 2.5 end
+            if i == 2 then bullet.speed = 1 end
           end)
           angle = angle + mod
         end
@@ -594,7 +598,7 @@ local function updateBakebake(bakebake)
       if math.sqrt((bullet.x - bakebake.x) * (bullet.x - bakebake.x) + (bullet.y - bakebake.y) * (bullet.y - bakebake.y)) < size + images.fairydown:getHeight() / 2 then
         bakebake.health = bakebake.health - 1
         if bakebake.seen then
-          explosion.spawn({x = bullet.x, y = bullet.y})
+          explosion.spawn({x = bullet.x, y = bullet.y, type = 'blue'})
           sound.playSfx('explosion1')
         end
         bullet.active = false
@@ -605,8 +609,10 @@ local function updateBakebake(bakebake)
   bakebake.clock = bakebake.clock + 1
   if killed then
     g.score = g.score + 2000
-    explosion.spawn({x = bakebake.x, y = bakebake.y, big = 'true'})
-    if bakebake.seen then sound.playSfx('explosion2') end
+    if bakebake.seen then
+      explosion.spawn({x = bakebake.x, y = bakebake.y, big = 'true', type = 'blue'})
+      sound.playSfx('explosion2')
+    end
     spawnNewBakebake(bakebake)
   elseif not bakebake.seen then
     local pDistance = g.getDistance(bakebake, player)
@@ -631,7 +637,7 @@ local function updateShell(shell)
       if math.sqrt((bullet.x - shell.x) * (bullet.x - shell.x) + (bullet.y - shell.y) * (bullet.y - shell.y)) < size + images['shell' .. shell.img]:getHeight() / 2 then
         shell.health = shell.health - 1
         if shell.seen then
-          explosion.spawn({x = bullet.x, y = bullet.y})
+          explosion.spawn({x = bullet.x, y = bullet.y, type = 'green'})
           sound.playSfx('explosion1')
         end
         bullet.active = false
@@ -647,12 +653,12 @@ local function updateShell(shell)
     if killedByPlayer then
       g.score = g.score + 150
       player.bombs = player.bombs + 1
+      if shell.seen then explosion.spawn({x = shell.x, y = shell.y, big = 'true', type = 'blue'}) end
     elseif not stage.oni.active then
       if stage.oni.health < stage.oniMax then stage.oni.health = stage.oni.health + 1 end
       if stage.oni.health >= stage.oniMax then spawnOni() end
+      if shell.seen then explosion.spawn({x = shell.x, y = shell.y, big = 'true', type = 'green'}) end
     end
-    explosion.spawn({x = shell.x, y = shell.y, big = 'true'})
-    -- explosion.spawn({x = shell.x, y = shell.y, big = 'true', random = true, wait = 1})
     spawnNewShell(shell)
   end
 end
@@ -667,7 +673,7 @@ local function updateBullet(bullet)
   elseif bullet.clock % bulletAnimateMax >= bulletAnimateInterval * 3 then bullet.animateIndex = 4 end
   if string.find(bullet.type, 'bolt') or string.find(bullet.type, 'arrow') or string.find(bullet.type, 'pill') then bullet.rotation = bullet.angle end
   if killBulletClock > 0 then
-    explosion.spawn({x = bullet.x, y = bullet.y, type = 'red'})
+    if bullet.seen then explosion.spawn({x = bullet.x, y = bullet.y, type = 'red'}) end
     bullet.active = false
   end
   if g.getDistance(bullet, player) >= 1200 then bullet.active = false end
@@ -693,12 +699,10 @@ local function updateBullet(bullet)
 end
 
 local function spawnZone()
-
   player.x = g.gameWidth / 2
   player.y = g.gameHeight / 2
   player.cameraX = 0
   player.cameraY = 0
-
   for i = 1, #stage.faries do stage.faries[i].active = false end
   for i = 1, #stage.bakebakes do stage.bakebakes[i].active = false end
   for i = 1, #stage.shells do stage.shells[i].active = false end
@@ -724,22 +728,22 @@ local function spawnZone()
           spawnBakebake(eX, eY)
         end
       elseif stage.currentZone == 4 then -- void
-        if j % 2 == 1 and i % 3 == 1 then
+        if j % 2 == 1 and i % 2 == 1 then
           spawnFairy(eX, eY)
-          spawnShell(eX, eY)
           spawnBakebake(eX, eY)
+        end
+        if j % 2 == 1 and i % 3 == 1 then
+          spawnShell(eX, eY)
         end
       end
       x = x + g.gameWidth
     end
     y = y + g.gameHeight
   end
-
-  if stage.currentZone == 1 then stage.oniMax = 12
+  if stage.currentZone == 1 then stage.oniMax = 10
   elseif stage.currentZone == 2 then stage.oniMax = 15
-  elseif stage.currentZone == 2 then stage.oniMax = 15
-  elseif stage.currentZone == 3 then stage.oniMax = 20 end
-
+  elseif stage.currentZone == 3 then stage.oniMax = 20
+  elseif stage.currentZone == 4 then stage.oniMax = 10 end
 end
 
 local function updateZone()
@@ -755,8 +759,6 @@ local function updateZone()
     end
   else g.changingZoneClock = 60 * 3.5 end
 end
-
-
 
 local function update()
   if not g.changingZones and not g.gameOver and not g.paused then
@@ -784,39 +786,33 @@ local function update()
 end
 
 local function drawOni()
-  local x, y, width, height = stage.oni.x + g.grid - player.cameraX, stage.oni.y + g.grid - player.cameraY, images.onibottom:getWidth(), images.onibottom:getHeight()
+  local x, y, width, height = stage.oni.x - player.cameraX, stage.oni.y - player.cameraY, images.onibottom:getWidth(), images.onibottom:getHeight()
   love.graphics.draw(images.onibottom, x, y, 0, 1, 1, width / 2, height / 2)
-  g.mask('half', function() love.graphics.draw(images.onilinesshadow, x, y, 0, 1, 1, width / 2, height / 2) end)
   love.graphics.draw(images.onilines, x, y, 0, 1, 1, width / 2, height / 2)
   love.graphics.draw(images.onihead, x, y, 0, 1, 1, width / 2, height / 2)
-  g.mask('most', function() love.graphics.draw(images.onishadow, x, y, 0, 1, 1, width / 2, height / 2) end)
-  g.mask('quarter', function() love.graphics.draw(images.onishadow2, x, y, 0, 1, 1, width / 2, height / 2) end)
 end
 
 local function drawFairy(fairy)
-  local x, y = fairy.x + g.grid - player.cameraX, fairy.y + g.grid - player.cameraY
+  local x, y = fairy.x - player.cameraX, fairy.y - player.cameraY
   love.graphics.draw(images.fairydown, x, y, 0, 1, 1, images.fairydown:getWidth() / 2, images.fairydown:getHeight() / 2)
-  g.mask('half', function() love.graphics.draw(images.fairydownwing, x, y, 0, 1, 1, images.fairydown:getWidth() / 2, images.fairydown:getHeight() / 2) end)
 end
 
 local function drawShell(shell)
-  local img, x, y = 'shell' .. shell.img, shell.x + g.grid - player.cameraX, shell.y + g.grid - player.cameraY
+  local img, x, y = 'shell' .. shell.img, shell.x - player.cameraX, shell.y - player.cameraY
   local flip = 1; if shell.flipped then flip = -1 end
   love.graphics.draw(images[img], x, y, shell.rotation, flip, 1, images[img]:getWidth() / 2, images[img]:getHeight() / 2)
-  g.mask('half', function() love.graphics.draw(images[img .. 'over'], x, y, shell.rotation, flip, 1, images[img]:getWidth() / 2, images[img]:getHeight() / 2) end)
   love.graphics.setColor(g.colors.white)
 end
 
 local function drawBakebake(bakebake)
-  local x, y, xOff, yOff = bakebake.x + g.grid - player.cameraX, bakebake.y + g.grid - player.cameraY, images.bakebake:getWidth() / 2, images.bakebake:getHeight() / 2
+  local x, y, xOff, yOff = bakebake.x - player.cameraX, bakebake.y - player.cameraY, images.bakebake:getWidth() / 2, images.bakebake:getHeight() / 2
   love.graphics.draw(images.bakebake, x, y, 0, 1, 1, xOff, yOff)
-  g.mask('half', function() love.graphics.draw(images.bakebakeover, x, y, 0, 1, 1, xOff, yOff) end)
 end
 
 local function drawBullets()
   local function drawBullet(bullet)
     if not bullet.flags.invisible then
-      love.graphics.draw(images[bullet.type .. bullet.animateIndex], bullet.x + g.grid - player.cameraX, bullet.y + g.grid - player.cameraY, bullet.rotation, 1, 1, bullet.width / 2, bullet.height / 2)
+      love.graphics.draw(images[bullet.type .. bullet.animateIndex], bullet.x - player.cameraX, bullet.y - player.cameraY, bullet.rotation, 1, 1, bullet.width / 2, bullet.height / 2)
     end
   end
   for i = 1, #bullets do if bullets[i].active and not bullets[i].top then drawBullet(bullets[i]) end end

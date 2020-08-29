@@ -1,4 +1,4 @@
-local images, clock, playerSpeed, playerMoveClock, canShoot, shotClock, lastBulletX, lastBulletY, bulletAngle, canBomb, bombClock, lastX
+local images, clock, playerSpeed, playerMoveClock, canShoot, shotClock, lastBulletX, lastBulletY, bulletAngle, canBomb, bombClock, lastX, animationOffset, camLerp
 
 local function load()
   images = g.images('player', {'hitbox', 'bullet', 'cirno', 'bomb', 'bombtop'})
@@ -7,7 +7,7 @@ local function load()
   player.y = g.gameHeight / 2
   player.cameraX = 0
   player.cameraY = 0
-  playerSpeed = 3
+  playerSpeed = 2
   for i = 1, 64 do player.bullets[i] = {} end
   invulnerableLimit = 60 * 3
   canShoot = true
@@ -16,11 +16,13 @@ local function load()
   bulletAngle = math.pi / 2
   bombClock = 0
   lastX = -1
+  animationOffset = 0
+  camLerp = .1
 end
 
+
 local function updateMove()
-  local xSpeed = 0
-  local ySpeed = 0
+  local xSpeed, ySpeed = 0, 0
   local speed = playerSpeed
   if controls.a() then
     xSpeed = -1
@@ -32,12 +34,26 @@ local function updateMove()
   if controls.w() then ySpeed = -1
   elseif controls.s() then ySpeed = 1 end
   local fSpeed = speed / math.sqrt(math.max(xSpeed + ySpeed, 1))
-  local moveModX = fSpeed * xSpeed
-  local moveModY = fSpeed * ySpeed
-  player.cameraX = player.cameraX + moveModX
-  player.cameraY = player.cameraY + moveModY
-  player.x = player.x + moveModX
-  player.y = player.y + moveModY
+  local x = fSpeed * xSpeed
+  local y = fSpeed * ySpeed
+  player.x = player.x + x
+  player.y = player.y + y
+  local diffX, diffY = (player.x - g.gameWidth / 2 - player.cameraX) * camLerp, (player.y - g.gameHeight / 2 - player.cameraY) * camLerp
+  player.cameraX = player.cameraX + diffX
+  player.cameraY = player.cameraY + diffY
+  background.diffX = diffX
+  background.diffY = diffY
+end
+
+local function updateMoveAnalog()
+  local x, y = player.leftStick.x * playerSpeed, player.leftStick.y * playerSpeed
+  player.x = player.x + x
+  player.y = player.y + y
+  local diffX, diffY = (player.x - g.gameWidth / 2 - player.cameraX) * camLerp, (player.y - g.gameHeight / 2 - player.cameraY) * camLerp
+  player.cameraX = player.cameraX + diffX
+  player.cameraY = player.cameraY + diffY
+  background.diffX = diffX
+  background.diffY = diffY
 end
 
 local function spawnBullet(isBomb)
@@ -64,7 +80,7 @@ local function updateBombBullet(bullet)
     if distance <= g.grid * 5 then
       bullet.active = false
       explosion.spawn({x = bullet.x, y = bullet.y, big = true})
-      stage.oni.health = stage.oni.health - 1.5
+      stage.oni.health = stage.oni.health - 1
       if stage.oni.health <= 0 then
         stage.oni.dead = true
         stage.oni.health = 0
@@ -92,8 +108,10 @@ end
 
 local function updateShot()
   if controls.shooting() and canShoot then
+    bulletAngle = math.pi / 2
+    if player.rightStick then bulletAngle = math.atan2(player.rightStick.y, player.rightStick.x) end
     if controls.i() then bulletAngle = math.pi * 1.5
-    else bulletAngle = math.pi / 2 end
+    elseif controls.k() then bulletAngle = math.pi / 2 end
     if controls.j() then
       bulletAngle = math.pi
       if controls.i() then bulletAngle = bulletAngle + math.pi / 4
@@ -107,16 +125,14 @@ local function updateShot()
     shotClock = 0
   end
   local interval = 5
-  local limit = interval * 1
-  local max = limit
   if not canShoot and not g.gameOver and not g.paused then
-    if shotClock % interval == 0 and shotClock < limit then
+    if shotClock % interval == 0 then
       sound.playSfx('playershot')
       spawnBullet()
     end
     shotClock = shotClock + 1
   end
-  if shotClock >= max then canShoot = true end
+  if shotClock >= interval then canShoot = true end
 end
 
 local function updateBomb()
@@ -154,11 +170,18 @@ end
 local lastRollover = 0
 local function update()
   if not g.changingZones and not g.gameOver and not g.paused then
-    if player.invulnerableClock < invulnerableLimit - 15 then updateMove() end
+    if player.invulnerableClock < invulnerableLimit - 15 then
+      updateMove()
+      if player.leftStick then updateMoveAnalog() end
+    end
     updateShot()
     if player.invulnerableClock > 0 then player.invulnerableClock = player.invulnerableClock - 1 end
     updateBomb()
     clock = clock + 1
+    animationOffset = 0
+    if clock % g.bobInterval >= g.bobInterval / 4 then animationOffset = 1 end
+    if clock % g.bobInterval >= g.bobInterval / 2 then animationOffset = 0 end
+    if clock % g.bobInterval >= g.bobInterval / 4 * 3 then animationOffset = -1 end
   end
   for i = 1, #player.bullets do if player.bullets[i].active then updateBullet(player.bullets[i]) end end
   local extraCount = math.floor(g.score / 50000)
@@ -169,23 +192,22 @@ local function update()
 end
 
 local function drawBullet(bullet)
-  local x, y = bullet.x + g.grid - player.cameraX, bullet.y + g.grid - player.cameraY
+  local x, y = bullet.x - player.cameraX, bullet.y - player.cameraY
   if bullet.bomb then
     love.graphics.draw(images.bomb, x, y, bullet.rotation, bullet.xFlip, bullet.yFlip, images.bomb:getWidth() / 2, images.bomb:getHeight() / 2)
-    g.mask('half', function()  love.graphics.draw(images.bombtop, x, y, bullet.rotation, bullet.xFlip, bullet.yFlip, images.bomb:getWidth() / 2, images.bomb:getHeight() / 2) end)
   else
-    g.mask('half', function() love.graphics.draw(images.bullet, x, y, bullet.angle, 1, 1, images.bullet:getWidth() / 2, images.bullet:getHeight() / 2) end)
+    love.graphics.draw(images.bullet, x, y, bullet.angle, 1, 1, images.bullet:getWidth() / 2, images.bullet:getHeight() / 2)
   end
 end
 
 local function draw()
   if not g.changingZones and not g.gameOver then
-    local x, y = player.x + g.grid - player.cameraX, player.y + g.grid - player.cameraY
-    local xOffset = -3
-    if lastX == 1 then xOffset = 2 end
+    local x, y = player.x - player.cameraX, player.y - player.cameraY
+    local xOffset = -1
+    if lastX == 1 then xOffset = 1 end
     local interval = 30
     if player.invulnerableClock % interval < interval / 2 then
-      love.graphics.draw(images.cirno, x + xOffset, y, 0, lastX, 1, images.cirno:getWidth() / 2, images.cirno:getHeight() / 2)
+      love.graphics.draw(images.cirno, x + xOffset, y + 2 + animationOffset, 0, lastX, 1, images.cirno:getWidth() / 2, images.cirno:getHeight() / 2)
     end
     for i = 1, #player.bullets do if player.bullets[i].active and player.bullets[i].seen then drawBullet(player.bullets[i]) end end
   end
@@ -193,18 +215,25 @@ end
 
 local function drawHitbox()
   if not g.changingZones and not g.gameOver then
-    local x, y = player.x + g.grid - player.cameraX, player.y + g.grid - player.cameraY
-    love.graphics.draw(images.hitbox, x, y, 0, 1, 1, images.hitbox:getWidth() / 2, images.hitbox:getHeight() / 2)
+    local x, y = player.x - player.cameraX, player.y - player.cameraY
+    -- love.graphics.draw(images.hitbox, x, y, 0, 1, 1, images.hitbox:getWidth() / 2, images.hitbox:getHeight() / 2)
+    love.graphics.setColor(g.colorsLo.black)
+    love.graphics.circle('fill', x, y, 3)
+    love.graphics.setColor(g.colorsLo.red)
+    love.graphics.circle('fill', x, y, 2)
+    love.graphics.setColor(g.colorsLo.offWhite)
+    love.graphics.circle('fill', x, y, 1)
+    love.graphics.setColor(g.colorsLo.white)
   end
 end
 
 return {
   bullets = {},
-  lives = 2,
+  lives = 9999999,
   mapOffsetX = g.gameWidth / 2,
   mapOffsetY = g.gameHeight / 2,
 	load = load,
-  bombs = 5,
+  bombs = 0,
   draw = draw,
   drawHitbox = drawHitbox,
   update = update,

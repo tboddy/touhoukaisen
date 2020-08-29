@@ -28,7 +28,6 @@ local function loadScore()
   local scoreData = love.filesystem.read('score.lua')
   if scoreData then
     g.saveTable = bitser.loads(scoreData)
-    print(g.saveTable.score)
     if g.saveTable.score then g.highScore = g.saveTable.score end
     if g.saveTable.fullscreen and (g.saveTable.fullscreen == true or g.saveTable.fullscreen == 'true') then g.doFullscreen() end
   else g.saveTable = {} end
@@ -55,6 +54,7 @@ function love.update()
   elseif controls.reload() then g.restart() end
   sound.update()
   if g.started then
+    controls.update()
     background.update()
     player.update()
     stage.update()

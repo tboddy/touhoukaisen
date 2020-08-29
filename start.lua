@@ -1,7 +1,7 @@
 local images, currentMenu, movingMenu, menu, selecting, startedBgm, showingControls, showedControls, controlClock
 
 local function load()
-  images = g.images('start', {'bg', 'title', 'titletop', 'controller'})
+  images = g.images('start', {'bg', 'title', 'controller'})
   menu = {'1P START', 'CONTROLS', 'FULLSCREEN', 'QUIT'}
   currentMenu = 1
   sound.playBgm('startintro')
@@ -74,45 +74,43 @@ local function update()
   startedBgm = true
 end
 
+local function drawBg()
+  love.graphics.setColor(g.colorsLo.black)
+  love.graphics.rectangle('fill', 0, 0, g.width, g.height)
+  love.graphics.setColor(g.colorsLo.green)
+  love.graphics.draw(images.bg, 0, 0)
+  love.graphics.setColor(g.colorsLo.white)
+end
+
 local function drawTitle()
-  local x, y = g.width / 2 - images.title:getWidth() / 2, g.grid * 5
-  love.graphics.setColor(g.colors.black)
+  local x, y = g.width / 2 - images.title:getWidth() / 2, g.grid * 2.5
+  love.graphics.setColor(g.colorsLo.black)
   love.graphics.draw(images.title, x + 1, y + 1)
-  love.graphics.setColor(g.colors.green)
+  love.graphics.setColor(g.colorsLo.green)
   love.graphics.draw(images.title, x, y)
-  love.graphics.setColor(g.colors.yellow)
-  love.graphics.draw(images.titletop, x, y)
-  love.graphics.setColor(g.colors.white)
+  love.graphics.setColor(g.colorsLo.white)
 end
 
 local function drawMenu()
   drawTitle()
-  love.graphics.setFont(g.fontBig)
-  local yOffset = g.grid * 2.5
-  local y = g.grid * 12.75
+  local y = g.grid * 6.5
   for i = 1, #menu do
     local labelObj = {input = menu[i], y = y, x = 0, align = {width = g.width, type = 'center'}}
-    if i == currentMenu then labelObj.color = 'green' end
+    if i == currentMenu then labelObj.color = 'yellow' end
     chrome.drawLabel(labelObj)
-    if i == currentMenu then
-      labelObj.color = 'yellow'
-      labelObj.transparent = true
-      chrome.drawLabel(labelObj)
-    end
-    y = y + yOffset
+    y = y + 14
   end
-  love.graphics.setFont(g.fontJapan)
-  chrome.drawLabel({input = 'クレジット', x = 0, y = g.height - g.grid * 2 + 3, align = {type = 'right', width = g.width - g.grid * 6}})
-  love.graphics.setFont(g.font)
-  chrome.drawLabel({input = '2020 T.B.', x = 0, y = g.height - g.grid * 2, align = {type = 'right', width = g.width - g.grid}})
-  love.graphics.setFont(g.fontBig)
-  chrome.drawLabel({input = 'HIGH SCORE: ' .. g.processScore(g.highScore), y = g.height - g.grid * 5, align = {type = 'center'}})
-  love.graphics.setFont(g.font)
+  -- love.graphics.setFont(g.fontJapan)
+  -- chrome.drawLabel({input = 'クレジット', x = 0, y = g.height - g.grid * 2 + 3, align = {type = 'right', width = g.width - g.grid * 6}})
+  -- love.graphics.setFont(g.font)
+  -- chrome.drawLabel({input = '2020 T.B.', x = 0, y = g.height - g.grid * 2, align = {type = 'right', width = g.width - g.grid}})
+  -- chrome.drawLabel({input = 'HIGH SCORE: ' .. g.processScore(g.highScore), y = g.height - g.grid * 5, align = {type = 'center'}})
+  -- love.graphics.setFont(g.font)
 end
 
 local function drawControls()
   love.graphics.setColor(g.colors.black)
-  g.mask('most', function() love.graphics.rectangle('fill', 0, 0, g.width, g.height) end)
+  love.graphics.rectangle('fill', 0, 0, g.width, g.height)
   love.graphics.setColor(g.colors.white)
   local function str(eStr, jStr, sX, sY)
     love.graphics.setFont(g.font)
@@ -235,14 +233,14 @@ local function drawControls()
   chrome.drawLabel({input = 'Press shoot or bomb to return to menu', y = y, align = {type = 'right', width = g.width - x}})
   chrome.drawLabel({input = 'Press shoot or bomb to return to menu', y = y, color = 'yellow', transparent = true, align = {type = 'right', width = g.width - x}})
   y = y + g.grid * 1.5
-  love.graphics.setFont(g.fontJapanBig)
+  love.graphics.setFont(g.fontJapan)
   chrome.drawLabel({input = 'ショット: タイトルへ', y = y, align = {type = 'right', width = g.width - x}})
   chrome.drawLabel({input = 'ショット: タイトルへ', y = y, color = 'yellow', transparent = true, align = {type = 'right', width = g.width - x}})
   love.graphics.setFont(g.font)
 end
 
 local function draw()
-  love.graphics.draw(images.bg, 0, 0)
+  drawBg()
   if showingControls then drawControls()
   else drawMenu() end
 end

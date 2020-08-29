@@ -31,8 +31,13 @@ end
 
 local function draw()
   for i = 1, #grazes do if grazes[i].active then
-		g.mask('half', function() love.graphics.draw(images.graze, grazes[i].x + g.grid - player.cameraX, grazes[i].y + g.grid - player.cameraY, 0, 2, 2, images.graze:getWidth() / 2, images.graze:getHeight() / 2) end)
+  	local x, y = grazes[i].x - player.cameraX, grazes[i].y - player.cameraY
+		love.graphics.setColor(g.colorsLo.red)
+  	love.graphics.draw(images.graze, x, y, 0, 1, 1, images.graze:getWidth() / 2, images.graze:getHeight() / 2)
+		love.graphics.setColor(g.colorsLo.offWhite)
+  	love.graphics.rectangle('fill', x - 1, y - 1, 1, 1)
   end end
+	love.graphics.setColor(g.colorsLo.white)
 end
 
 return {

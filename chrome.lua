@@ -1,17 +1,18 @@
-local images, rotations, flips, bossBarQuad, gameOverClock
+local images, rotations, flips, gameOverClock, sideWidth, sideX, sideY
 
 local function load()
-  images = g.images('chrome', {'frame', 'frametop', 'beachball', 'beachballshadow', 'heart', 'beware', 'bossbar'})
-  images.bossbar:setWrap('repeat')
-  bossBarQuad = love.graphics.newQuad(0, 0, 0, 0, images.bossbar:getDimensions())
+  images = g.images('chrome', {'beachball', 'heart'})
   rotations = {}
   flips = {}
-  local mod = math.pi / 25
+  local mod = math.pi / 20
   for i = 1, 64 do
     rotations[i] = -mod + mod * 2 * math.random()
     flips[i] = 1; if math.random() < .5 then flips[i] = -1 end
   end
   gameOverClock = 0
+  sideWidth = g.width - g.gameWidth
+  sideX = g.gameWidth + 9
+  sideY = 8
 end
 
 local savedScore, gotHigh = false, false
@@ -24,29 +25,21 @@ local function saveScore()
 end
 
 local function drawLabel(opts)
-  local color = g.colors.offWhite
+  local color = g.colorsLo.offWhite
   local align = 'left'
   local limit = g.width
   local x = 0
   if opts.x then x = opts.x end
-  if opts.color then color = g.colors[opts.color] end
+  if opts.color then color = g.colorsLo[opts.color] end
   if opts.align then
     align = opts.align.type
     if opts.align.width then limit = opts.align.width end
   end
-  love.graphics.setColor(g.colors.black)
-  if opts.transparent then
-    g.mask('half', function()
-      love.graphics.printf(opts.input, x + 1, opts.y + 1, limit, align)
-      love.graphics.setColor(color)
-      love.graphics.printf(opts.input, x, opts.y, limit, align)
-    end)
-  else
-    love.graphics.printf(opts.input, x + 1, opts.y + 1, limit, align)
-    love.graphics.setColor(color)
-    love.graphics.printf(opts.input, x, opts.y, limit, align)
-  end
-  love.graphics.setColor(g.colors.white)
+  love.graphics.setColor(g.colorsLo.black)
+  love.graphics.printf(opts.input, x + 1, opts.y + 1, limit, align)
+  love.graphics.setColor(color)
+  love.graphics.printf(opts.input, x, opts.y, limit, align)
+  love.graphics.setColor(g.colorsLo.white)
 end
 
 local function update()
@@ -68,159 +61,136 @@ local function update()
 end
 
 local function drawFrame()
-  love.graphics.setColor(g.colors.black)
-  love.graphics.draw(images.frame, 0, 0)
-  love.graphics.setColor(g.colors.purple)
-  love.graphics.draw(images.frametop, 0, 0)
-  love.graphics.setColor(g.colors.white)
+  love.graphics.setColor(g.colorsLo.black)
+  love.graphics.rectangle('fill', g.gameWidth, 0, sideWidth, g.height)
+  love.graphics.setColor(g.colorsLo.offWhite)
+  love.graphics.rectangle('fill', g.gameWidth + 1, 0, 1, g.height)
+  love.graphics.setColor(g.colorsLo.white)
 end
 
 local function drawScore()
   local highScore = g.highScore; if g.score > g.highScore then highScore = g.score end
-  local x, y = g.grid * 2 + g.gameWidth, g.grid
-  drawLabel({input = 'HI SCORE   ' .. g.processScore(highScore), x = x, y = y})
-  y = y + g.grid * 1.25
-  drawLabel({input = 'SCORE      ' .. g.processScore(g.score), x = x, y = y})
-  y = y + g.grid * 1.5
-  drawLabel({input = 'EXTEND AT   +50000', x = x, y = y})
+  local y = sideY
+  drawLabel({input = 'HI ' .. g.processScore(highScore), x = sideX, y = y})
+  y = y + 12
+  drawLabel({input = 'SC ' .. g.processScore(g.score), x = sideX, y = y})
+  -- drawLabel({input = 'EXTEND AT   +50000', x = x, y = y})
 end
 
 local function drawBoss()
-  local x, y = g.grid * 2 + g.gameWidth, g.grid * 18.5 - 3 - 4
-  local width, height = g.width - x - g.grid - 1, g.grid
-  love.graphics.setColor(g.colors.black)
-  love.graphics.rectangle('fill', x - 3, y - 3, width + 6, height + 6)
-  love.graphics.setColor(g.colors.purple)
-  love.graphics.rectangle('fill', x - 2, y - 2, width + 4, height + 4)
-  love.graphics.setColor(g.colors.black)
+  local x, y = sideX + 2, g.grid * 9.5
+  local width, height = sideWidth - g.grid - 4, 12 - 4
+  love.graphics.setColor(g.colorsLo.black)
   love.graphics.rectangle('fill', x - 1, y - 1, width + 2, height + 2)
-  local barWidth = math.floor(stage.oni.health / stage.oniMax * width)
-  love.graphics.setColor(g.colors.green)
-  love.graphics.rectangle('fill', x, y, barWidth, height)
-  bossBarQuad:setViewport(0, 0, barWidth, height)
-  love.graphics.setColor(g.colors.yellow)
-  love.graphics.draw(images.bossbar, bossBarQuad, x, y)
-  love.graphics.setColor(g.colors.white)
+  love.graphics.setColor(g.colorsLo.red)
+  love.graphics.rectangle('fill', x, y, stage.oni.health / stage.oniMax * width, height)
+  love.graphics.setColor(g.colorsLo.offWhite)
+  love.graphics.rectangle('line', x - 1, y - 1, width + 3, height + 3)
+  love.graphics.setColor(g.colorsLo.white)
   if stage.oni.active then
-    x = x + 3
-    y = y - images.beware:getHeight() - 12
-    love.graphics.setColor(g.colors.black)
-    love.graphics.draw(images.beware, x + 1, y + 1)
-    love.graphics.setColor(g.colors.yellow)
-    love.graphics.draw(images.beware, x, y)
-    love.graphics.setColor(g.colors.green)
-    g.mask('half', function() love.graphics.draw(images.beware, x, y) end)
-    love.graphics.setColor(g.colors.white)
+    x = sideX
+    y = g.grid * 8.5 + 2
+    width = width + 4
+    drawLabel({input = '-BEWARE-', x = x, y = y, color = 'red', align = {type = 'center', width = width}})
   end
 end
 
 local function drawMapEntities()
-  local x, eSize = g.grid * 2 + g.gameWidth, 3
-  local size = g.width - g.grid - x - 1
-  local y = g.height - size - g.grid
+  local x, eSize = sideX + 1, 1
+  local size = g.width - 8 - x
+  local y = g.height - size - 8
 
   local function drawEntity(entity, type)
-    local color = g.colors.blueLight
-    if type == 'shell' then color = g.colors.yellowDark
-    elseif type == 'bakebake' then color = g.colors.green
-    elseif type == 'player' then color = g.colors.gray
+    local color = g.colorsLo.green
+    if type == 'shell' then color = g.colorsLo.yellow
+    elseif type == 'bakebake' then color = g.colorsLo.offWhite
+    elseif type == 'player' then
+      color = g.colorsLo.blue
+      eSize = 2
     elseif type == 'oni' then
-      color = g.colors.offWhite
-      eSize = 5
+      color = g.colorsLo.offWhite
+      eSize = 3
     end
     love.graphics.setColor(color)
     local mod = size / (g.gameWidth * 3)
     local eX, eY = entity.x - player.cameraX + g.gameWidth, entity.y - player.cameraY + g.gameHeight
-    eX = eX * mod + x - eSize / 2
-    eY = eY * mod + y - eSize / 2
-    if eX >= x - eSize / 2 and eX <= x + size - eSize / 2 and
-      eY >= y - eSize / 2 and eY <= y + size - eSize / 2 then
-      love.graphics.rectangle('fill', eX, eY, eSize, eSize)
+    eX = eX * mod + x
+    eY = eY * mod + y
+    if eX >= x - eSize / 2 and eX <= x + size + eSize / 2 and
+      eY >= y - eSize / 2 and eY <= y + size + eSize / 2 then
+      love.graphics.circle('fill', eX, eY, eSize)
     end
   end
 
-  g.mask('half', function()
-    for i = 1, #stage.faries do if stage.faries[i].active then drawEntity(stage.faries[i], 'fairy') end end
-    for i = 1, #stage.shells do if stage.shells[i].active then drawEntity(stage.shells[i], 'shell') end end
-    for i = 1, #stage.bakebakes do if stage.bakebakes[i].active then drawEntity(stage.bakebakes[i], 'bakebake') end end
-    drawEntity(player, 'player')
-    if stage.oni.active then drawEntity(stage.oni, 'oni') end
-  end)
-
-  love.graphics.setColor(g.colors.white)
+  for i = 1, #stage.faries do if stage.faries[i].active then drawEntity(stage.faries[i], 'fairy') end end
+  for i = 1, #stage.shells do if stage.shells[i].active then drawEntity(stage.shells[i], 'shell') end end
+  for i = 1, #stage.bakebakes do if stage.bakebakes[i].active then drawEntity(stage.bakebakes[i], 'bakebake') end end
+  drawEntity(player, 'player')
+  if stage.oni.active then drawEntity(stage.oni, 'oni') end
+  love.graphics.setColor(g.colorsLo.white)
 end
 
 local function drawMap()
-  local x = g.grid * 2 + g.gameWidth
-  local size = g.width - g.grid - x - 1
-  local y = g.height - size - g.grid
-  love.graphics.setColor(g.colors.black)
-  love.graphics.rectangle('fill', x - 3, y - 3, size + 6, size + 6)
-  love.graphics.setColor(g.colors.purple)
-  love.graphics.rectangle('fill', x - 2, y - 2, size + 4, size + 4)
-  love.graphics.setColor(g.colors.black)
-  love.graphics.rectangle('fill', x - 1, y - 1, size + 2, size + 2)
+  local x = sideX + 1
+  local size = g.width - 8 - x
+  local y = g.height - size - 8
+  love.graphics.setColor(g.colorsLo.black)
   love.graphics.rectangle('fill', x, y, size, size)
-  drawMapEntities()
+  if not g.changingZones then drawMapEntities() end
+  love.graphics.setColor(g.colorsLo.offWhite)
+  love.graphics.rectangle('line', x, y, size + 1, size + 1)
   local gridSize = size / 3
   local offset = size / 2 - gridSize / 2
-  -- offset = 0
-  love.graphics.setColor(g.colors.purple)
-  g.mask('half', function() love.graphics.rectangle('line', x + offset, y + offset, gridSize + 1, gridSize + 1) end)
+  if not g.changingZones then
+    love.graphics.setColor(g.colorsLo.gray)
+    love.graphics.rectangle('line', x + offset, y + offset, gridSize + 1, gridSize + 1)
+  end
+  love.graphics.setColor(g.colorsLo.white)
 end
 
 local function drawLives()
-  local x, y = g.grid * 2 + g.gameWidth + 8, g.grid * 6.25
+  local x, y = sideX + 4, sideY + g.grid * 2
   if player.lives > 0 then
-    for i = 1, player.lives do
-      love.graphics.setColor(g.colors.black)
-      love.graphics.draw(images.heart, x + 1, y + 1, rotations[i], 1, 1, images.heart:getWidth() / 2, images.heart:getHeight() / 2)
-      love.graphics.setColor(g.colors.redLight)
-      love.graphics.draw(images.heart, x, y, rotations[i], 1, 1, images.heart:getWidth() / 2, images.heart:getHeight() / 2)
-      x = x + g.grid * 1.25 + 1
+    for i = 1, 3 do
+      love.graphics.setColor(g.colorsLo.red)
+      love.graphics.draw(images.heart, x, y, rotations[i], flips[i], 1, images.heart:getWidth() / 2, images.heart:getHeight() / 2)
+      x = x + 11
     end
   end
-  love.graphics.setColor(g.colors.white)
+  love.graphics.setColor(g.colorsLo.white)
 end
 
 local function drawBeachballs()
-  local startX, y = g.grid * 2 + g.gameWidth + 8, g.grid * 8 + 2
+  local startX, y = sideX + 4, sideY + g.grid * 3 - 1
   local x = startX
   if player.bombs > 0 then
     for i = 1, player.bombs do
-      love.graphics.draw(images.beachballshadow, x + 1, y + 1, rotations[i], flips[i], 1, images.beachball:getWidth() / 2, images.beachball:getHeight() / 2)
+      love.graphics.setColor(g.colorsLo.white)
       love.graphics.draw(images.beachball, x, y, rotations[i], flips[i], 1, images.beachball:getWidth() / 2, images.beachball:getHeight() / 2)
-      x = x + g.grid * 1.25 + 1
-      if i % 7 == 0 then
-        y = y + 20
+      x = x + 11
+      if i % 6 == 0 then
+        y = y + 12
         x = startX
       end
     end
-  else
-    x = g.grid * 2 + g.gameWidth
-    drawLabel({input = 'NO BOMBS', x = x, y = y - 8})
-  end
+  else drawLabel({input = 'NO BOMBS', x = x - 4, y = y - 4}) end
 end
 
 local function drawStatus()
   local x, y, width = g.grid, g.grid + g.gameHeight / 2 - 8, g.gameWidth
   if chrome.currentStatusSub then y = y - g.grid * 1.5 end
-  love.graphics.setFont(g.fontBig)
-  drawLabel({input = chrome.currentStatus, color = 'yellow', x = x, y = y, align = {type = 'center', width = width}})
-  drawLabel({input = chrome.currentStatus, transparent = true, x = x, y = y, align = {type = 'center', width = width}})
+  drawLabel({input = chrome.currentStatus, color = 'yellow', x = 0, y = y, align = {type = 'center', width = g.gameWidth}})
   if chrome.currentStatusSub then
-    y = y + g.grid * 2.5
-    drawLabel({input = chrome.currentStatusSub, x = x, y = y, align = {type = 'center', width = width}})
+    y = y + g.grid
+    drawLabel({input = chrome.currentStatusSub, x = 0, y = y, align = {type = 'center', width = g.gameWidth}})
   end
-  love.graphics.setFont(g.font)
+  if g.gameOver then drawLabel({input = 'PRESS ANY BUTTON', y = math.floor(g.height / 3) * 2, x = 0, align = {type = 'center', width = g.gameWidth}}) end
 end
 
 local function drawPaused()
   local x, y, width, interval, str = g.grid, g.grid + g.gameHeight / 2 - 8, g.gameWidth, 90, 'Paused'
-  love.graphics.setFont(g.fontBig)
   if g.pauseClock % interval > interval / 2 then drawLabel({input = str, x = x, y = y, transparent = true, align = {type = 'center', width = width}})
   else drawLabel({input = str, x = x, y = y, align = {type = 'center', width = width}}) end
-  love.graphics.setFont(g.font)
 end
 
 local function draw()
@@ -232,10 +202,6 @@ local function draw()
   drawBeachballs()
   if chrome.currentStatus then drawStatus() end
   if g.paused then drawPaused() end
-  if g.gameOver then -- dont mind me
-    drawLabel({input = 'PRESS ANY BUTTON', y = math.floor(g.height / 3) * 2, x = g.grid, align = {type = 'center', width = g.gameWidth}})
-    drawLabel({input = 'PRESS ANY BUTTON', y = math.floor(g.height / 3) * 2, x = g.grid, color = 'yellow', transparent = 'true', align = {type = 'center', width = g.gameWidth}})
-  end
 end
 
 return {
